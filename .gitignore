@@ -1,0 +1,9 @@
+# The target.
+muconvert_stdout
+
+*.o
+.DS_Store
+
+# Vim swap files.
+*.swp
+.*.swp
