@@ -5,6 +5,7 @@
 `mutool convert` from https://mupdf.com/ seems to always write extracted text to a file.
 So I adapt its code a bit to read pdf text into an `unsigned char` buffer.
 I further add a thin Rust wrapper so that the same can be done from Rust side.
+All C and Rust sum up to less than 300 lines of codes.
 
 ## Why another pdf extractor
 
