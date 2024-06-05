@@ -2,6 +2,7 @@
 muconvert
 
 *.o
+*.dylib
 .DS_Store
 
 # Vim swap files.
