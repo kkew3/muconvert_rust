@@ -2,150 +2,166 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* input options */
-static const char *password = "";
-static int alphabits = 8;
-static float layout_w = FZ_DEFAULT_LAYOUT_W;
-static float layout_h = FZ_DEFAULT_LAYOUT_H;
-static float layout_em = FZ_DEFAULT_LAYOUT_EM;
-static char *layout_css = NULL;
-static int layout_use_doc_css = 1;
+typedef struct input_opts
+{
+	int alphabits;
+	float layout_w;
+	float layout_h;
+	float layout_em;
+	int layout_use_doc_css;
+} input_opts;
 
 /* output options */
-static const char *format = "text";
-static const char *options = "";
+typedef struct output_opts
+{
+	int dehyphenate;
+} output_opts;
 
-static fz_context *ctx;
-static fz_document *doc;
-static fz_document_writer *out;
-static fz_box_type page_box = FZ_CROP_BOX;
-static int count;
+typedef struct run_param
+{
+	fz_context *ctx;
+	fz_document *doc;
+	fz_document_writer *out;
+	fz_box_type page_box;
+	int count;
+} run_param;
 
-static void runpage(int number)
+void runpage(run_param *param, int number)
 {
 	fz_rect box;
 	fz_page *page;
 	fz_device *dev = NULL;
 	fz_matrix ctm;
 
-	page = fz_load_page(ctx, doc, number - 1);
+	page = fz_load_page(param->ctx, param->doc, number - 1);
 
 	fz_var(dev);
 
-	fz_try(ctx)
+	fz_try(param->ctx)
 	{
-		box = fz_bound_page_box(ctx, page, page_box);
+		box = fz_bound_page_box(param->ctx, page, param->page_box);
 
 		// Realign page box on 0,0
 		ctm = fz_translate(-box.x0, -box.y0);
 		box = fz_transform_rect(box, ctm);
 
-		dev = fz_begin_page(ctx, out, box);
-		fz_run_page(ctx, page, dev, ctm, NULL);
-		fz_end_page(ctx, out);
+		dev = fz_begin_page(param->ctx, param->out, box);
+		fz_run_page(param->ctx, page, dev, ctm, NULL);
+		fz_end_page(param->ctx, param->out);
 	}
-	fz_always(ctx)
+	fz_always(param->ctx)
 	{
-		fz_drop_page(ctx, page);
+		fz_drop_page(param->ctx, page);
 	}
-	fz_catch(ctx)
-		fz_rethrow(ctx);
+	fz_catch(param->ctx)
+		fz_rethrow(param->ctx);
 }
 
-static void runrange(const char *range)
+void runrange(run_param *param, const char *range)
 {
 	int start, end, i;
 
-	while ((range = fz_parse_page_range(ctx, range, &start, &end, count)))
+	while ((range = fz_parse_page_range(param->ctx, range, &start, &end, param->count)))
 	{
 		if (start < end)
 			for (i = start; i <= end; ++i)
-				runpage(i);
+				runpage(param, i);
 		else
 			for (i = start; i >= end; --i)
-				runpage(i);
+				runpage(param, i);
 	}
 }
 
-int main(int argc, char **argv)
+int pdftotext(char *filename, int dehyphenate, unsigned char *data, size_t cap)
 {
-    int i;
 	int retval = EXIT_SUCCESS;
+	run_param param;
+	input_opts in_opts;
+	in_opts.alphabits = 8;
+	in_opts.layout_em = FZ_DEFAULT_LAYOUT_EM;
+	in_opts.layout_h = FZ_DEFAULT_LAYOUT_H;
+	in_opts.layout_w = FZ_DEFAULT_LAYOUT_W;
+	in_opts.layout_use_doc_css = 1;
+	output_opts out_opts;
+	out_opts.dehyphenate = dehyphenate;
+	unsigned char *buf_ptr;
+	size_t buf_size;
 
-    ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
-    if (!ctx) {
+    param.ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
+    if (!param.ctx) {
         fprintf(stderr, "cannot create mupdf context\n");
         return EXIT_FAILURE;
     }
 
-    fz_try(ctx)
-        fz_register_document_handlers(ctx);
-    fz_catch(ctx)
+    fz_try(param.ctx)
+        fz_register_document_handlers(param.ctx);
+    fz_catch(param.ctx)
     {
-        // fz_report_error(ctx);
-        fprintf(stderr, "cannot register document handlers\n");
-		fz_drop_context(ctx);
+        fz_log_error_printf(param.ctx, "cannot register document handlers\n");
+		fz_drop_context(param.ctx);
 		return EXIT_FAILURE;
     }
 
-    fz_set_aa_level(ctx, alphabits);
+    fz_set_aa_level(param.ctx, in_opts.alphabits);
 
-    if (layout_css)
-	{
-		fz_buffer *buf = fz_read_file(ctx, layout_css);
-		fz_set_user_css(ctx, fz_string_from_buffer(ctx, buf));
-		fz_drop_buffer(ctx, buf);
-	}
+	fz_set_use_document_css(param.ctx, in_opts.layout_use_doc_css);
+	fz_buffer *buf = fz_new_buffer(param.ctx, cap);
 
-	fz_set_use_document_css(ctx, layout_use_doc_css);
-
-    fz_try(ctx)
-        out = fz_new_text_writer_with_output(ctx, format, fz_stdout(ctx), options);
-    fz_catch(ctx)
+    fz_try(param.ctx)
+        param.out = fz_new_text_writer_with_output(param.ctx, "text", fz_new_output_with_buffer(param.ctx, buf), out_opts.dehyphenate ? "dehyphenate" : "");
+    fz_catch(param.ctx)
     {
-        // fz_report_error(ctx);
-		fprintf(stderr, "cannot create document\n");
-		fz_drop_context(ctx);
+        fz_log_error_printf(param.ctx, "cannot create document\n");
+		fz_drop_buffer(param.ctx, buf);
+		fz_drop_context(param.ctx);
 		return EXIT_FAILURE;
     }
 
-    fz_var(doc);
-	fz_try(ctx)
+    fz_var(param.doc);
+	fz_try(param.ctx)
 	{
-		for (i = 1; i < argc; ++i)
-		{
-			doc = fz_open_document(ctx, argv[i]);
-			if (fz_needs_password(ctx, doc))
-				if (!fz_authenticate_password(ctx, doc, password))
-				{
-					// fz_throw(ctx, FZ_ERROR_ARGUMENT, "cannot authenticate password: %s", argv[i]);
-					fprintf(stderr, "cannot authenticate password\n");
-				}
-			fz_layout_document(ctx, doc, layout_w, layout_h, layout_em);
-			count = fz_count_pages(ctx, doc);
+		param.doc = fz_open_document(param.ctx, filename);
+		if (fz_needs_password(param.ctx, param.doc))
+			if (!fz_authenticate_password(param.ctx, param.doc, ""))
+			{
+				fz_throw(param.ctx, 1, "cannot authenticate password: %s", filename);
+				fz_log_error_printf(param.ctx, "cannot authenticate password\n");
+			}
+		fz_layout_document(param.ctx, param.doc, in_opts.layout_w, in_opts.layout_h, in_opts.layout_em);
+		param.count = fz_count_pages(param.ctx, param.doc);
 
-			if (i+1 < argc && fz_is_page_range(ctx, argv[i+1]))
-				runrange(argv[++i]);
-			else
-				runrange("1-N");
+		runrange(&param, "1-N");
 
-			fz_drop_document(ctx, doc);
-			doc = NULL;
-		}
-		fz_close_document_writer(ctx, out);
+		fz_drop_document(param.ctx, param.doc);
+		param.doc = NULL;
+
+		fz_close_document_writer(param.ctx, param.out);
+		buf_size = fz_buffer_storage(param.ctx, buf, &buf_ptr);
+		memcpy(data, buf_ptr, buf_size);
 	}
-	fz_always(ctx)
+	fz_always(param.ctx)
 	{
-		fz_drop_document(ctx, doc);
-		fz_drop_document_writer(ctx, out);
+		fz_drop_document(param.ctx, param.doc);
+		fz_drop_document_writer(param.ctx, param.out);
+		fz_drop_buffer(param.ctx, buf);
 	}
-	fz_catch(ctx)
+	fz_catch(param.ctx)
 	{
 		// fz_report_error(ctx);
 		retval = EXIT_FAILURE;
 	}
 
-	fz_drop_context(ctx);
+	fz_drop_context(param.ctx);
     return retval;
+}
+
+int main(int argc, char **argv)
+{
+	unsigned char data[2097152];
+	int retval = pdftotext(argv[1], 1, data, 2097152);
+	printf("%s", data);
+	return retval;
 }
