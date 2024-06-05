@@ -5,5 +5,5 @@ CFLAGS = -Wall -O3 \
   -L/usr/local/Cellar/mupdf/$(MUPDF_VERSION)/lib \
   -lmupdf-third -lmupdf
 
-muconvert_stdout: muconvert_stdout.c
+muconvert: muconvert.c
 	$(CC) $(CFLAGS) -o $@ $<
