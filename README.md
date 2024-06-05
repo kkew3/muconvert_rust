@@ -1,4 +1,4 @@
-# muconvert: A thin C and Rust wrappers over `mutool convert` that extract text from pdf
+# muconvert: A thin C and Rust wrapper over `mutool convert` that extracts text from pdf
 
 ## Introduction
 
@@ -9,9 +9,9 @@ All C and Rust sum up to less than 300 lines of codes.
 
 ## Why another pdf extractor
 
-I'm aware of a number of awesome Rust pdf text extractor like [pdf-extract](https://github.com/jrmuizel/pdf-extract).
+I'm aware of a number of awesome Rust pdf text extractors like [pdf-extract](https://github.com/jrmuizel/pdf-extract).
 There's also a rust binding of `mupdf` [here](https://github.com/messense/mupdf-rs).
-However, these libraries appears too large for my use case.
+However, these libraries appear too large for my use case.
 That's the main reason why I start this project.
 
 ## Build C
