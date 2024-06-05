@@ -1,33 +1,4 @@
-#include <mupdf/fitz.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-/* input options */
-typedef struct input_opts
-{
-	int alphabits;
-	float layout_w;
-	float layout_h;
-	float layout_em;
-	int layout_use_doc_css;
-} input_opts;
-
-/* output options */
-typedef struct output_opts
-{
-	int dehyphenate;
-} output_opts;
-
-typedef struct run_param
-{
-	fz_context *ctx;
-	fz_document *doc;
-	fz_document_writer *out;
-	fz_box_type page_box;
-	int count;
-} run_param;
+#include "muconvert.h"
 
 void runpage(run_param *param, int number)
 {
@@ -75,9 +46,9 @@ void runrange(run_param *param, const char *range)
 	}
 }
 
-int pdftotext(char *filename, int dehyphenate, unsigned char *data, size_t cap)
+int pdftotext(const char *filename, int dehyphenate, unsigned char *data, size_t *len)
 {
-	int retval = EXIT_SUCCESS;
+	int retval = 0;
 	run_param param;
 	input_opts in_opts;
 	in_opts.alphabits = 8;
@@ -93,7 +64,7 @@ int pdftotext(char *filename, int dehyphenate, unsigned char *data, size_t cap)
     param.ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
     if (!param.ctx) {
         fprintf(stderr, "cannot create mupdf context\n");
-        return EXIT_FAILURE;
+        return 1;
     }
 
     fz_try(param.ctx)
@@ -102,13 +73,13 @@ int pdftotext(char *filename, int dehyphenate, unsigned char *data, size_t cap)
     {
         fz_log_error_printf(param.ctx, "cannot register document handlers\n");
 		fz_drop_context(param.ctx);
-		return EXIT_FAILURE;
+		return 1;
     }
 
     fz_set_aa_level(param.ctx, in_opts.alphabits);
 
 	fz_set_use_document_css(param.ctx, in_opts.layout_use_doc_css);
-	fz_buffer *buf = fz_new_buffer(param.ctx, cap);
+	fz_buffer *buf = fz_new_buffer(param.ctx, *len);
 
     fz_try(param.ctx)
         param.out = fz_new_text_writer_with_output(param.ctx, "text", fz_new_output_with_buffer(param.ctx, buf), out_opts.dehyphenate ? "dehyphenate" : "");
@@ -117,7 +88,7 @@ int pdftotext(char *filename, int dehyphenate, unsigned char *data, size_t cap)
         fz_log_error_printf(param.ctx, "cannot create document\n");
 		fz_drop_buffer(param.ctx, buf);
 		fz_drop_context(param.ctx);
-		return EXIT_FAILURE;
+		return 1;
     }
 
     fz_var(param.doc);
@@ -140,7 +111,15 @@ int pdftotext(char *filename, int dehyphenate, unsigned char *data, size_t cap)
 
 		fz_close_document_writer(param.ctx, param.out);
 		buf_size = fz_buffer_storage(param.ctx, buf, &buf_ptr);
-		memcpy(data, buf_ptr, buf_size);
+		if (buf_size >= *len)
+		{
+			retval = 2;
+		}
+		else
+		{
+			memcpy(data, buf_ptr, buf_size);
+		}
+		*len = buf_size;
 	}
 	fz_always(param.ctx)
 	{
@@ -151,7 +130,7 @@ int pdftotext(char *filename, int dehyphenate, unsigned char *data, size_t cap)
 	fz_catch(param.ctx)
 	{
 		// fz_report_error(ctx);
-		retval = EXIT_FAILURE;
+		retval = 1;
 	}
 
 	fz_drop_context(param.ctx);
@@ -160,8 +139,10 @@ int pdftotext(char *filename, int dehyphenate, unsigned char *data, size_t cap)
 
 int main(int argc, char **argv)
 {
-	unsigned char data[2097152];
-	int retval = pdftotext(argv[1], 1, data, 2097152);
+	unsigned char data[2097152] = {0};
+	size_t len = 40000;
+	int retval = pdftotext(argv[1], 1, data, &len);
 	printf("%s", data);
+	printf("\n---\nlen: %ld\n", len);
 	return retval;
 }
