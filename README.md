@@ -40,5 +40,5 @@ let text = muconvert_rust::pdftotext(filename, false, true, buf)?;
 ```
 
 NOTE: I know this is a bit awkward.
-But I haven't yet found a way to keep the wrapper simple while circumvent such issue.
+But I haven't yet found a way to keep the wrapper simple while avoiding such issue.
 Suggestions are welcome!
