@@ -25,8 +25,8 @@ mod muconvert_internal {
 #[derive(Debug)]
 pub enum Error {
     /// The provided buffer is too small. Return the required minimum length
-    /// of the buffer.
-    OutOfBuffer(usize),
+    /// of the buffer, and the passed in buffer.
+    BufferTooSmall(usize, Vec<u8>),
     /// Caused by several reasons including IO error, incorrect password, etc.
     OtherFailure,
     /// Utf-8 decoding error.
@@ -81,7 +81,7 @@ pub fn pdftotext<P: AsRef<str>>(
     } else if retcode == RETCODE_OTHER_FAILURE {
         Err(Error::OtherFailure)
     } else if retcode == RETCODE_OUT_OF_BUFFER {
-        Err(Error::OutOfBuffer(len + 1))
+        Err(Error::BufferTooSmall(len + 1, buf))
     } else {
         Err(Error::UnexpectedCode(retcode))
     }
