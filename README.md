@@ -31,14 +31,35 @@ Not a perfect procedure, but basically:
 
 ```rust
 let filename = "hello.pdf";
-// Assign a large enough buffer for the pdf (NOTE below).
+// Assign a large enough buffer for the pdf (NOTE below),
+// and you'll be fine.
 let buf: Vec<u8> = vec![0; 103977368];
-// If you capture the error, and if it's due to buffer too small, it will tell
-// you how many bytes the buffer needs to have, and you may try again with the
-// new buffer ...
 let text = muconvert_rust::pdftotext(filename, false, true, buf)?;
 ```
 
 NOTE: I know this is a bit awkward.
+Currently, in case of a buffer too small error, here is a possible solution:
+
+```rust
+use muconvert_rust::{Error, pdftotext};
+
+let filename = "hello.pdf";
+// A very small buffer.
+let buf: Vec<u8> = vec![0; 100];
+match pdftotext(filename, false, true, buf) {
+    // Do something with the extracted text.
+    Ok(text) => (),
+    // In case of the buffer too small error,
+    Err(Error::BufferTooSmall(len, mut buf)) => {
+        // Extend the buffer.
+        buf.resize(len, 0);
+        // Retry, and do something with the text.
+        let text = pdftotext(filename, false, true, buf).unwrap();
+    }
+    // Handle other errors.
+    _ => (),
+}
+```
+
 But I haven't yet found a way to keep the wrapper simple while avoiding such issue.
 Suggestions are welcome!
