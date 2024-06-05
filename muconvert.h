@@ -32,6 +32,19 @@ typedef struct run_param
 	int count;
 } run_param;
 
-int pdftotext(const char *, int, unsigned char *, size_t *);
+/*
+ * Extract text from pdf named `filename`.
+ *
+ * Arguments:
+ *   filename      -- the path to the pdf
+ *   dehyphenate   -- nonzero to enable 'dehyphenate' option in mupdf
+ *   data          -- a large enough buffer to receive data from mupdf
+ *   len           -- as input, the size of `data`; as output, the size of the
+ *                    pdf data from mupdf
+ *
+ * Return:
+ *   retcode       -- 0 for success, 1 for error, 2 for buffer not big enough
+ */
+int pdftotext(const char *filename, int dehyphenate, unsigned char *data, size_t *len);
 
 #endif
