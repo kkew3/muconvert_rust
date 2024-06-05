@@ -5,7 +5,13 @@ CFLAGS = -Wall -O3 \
 	-L/usr/local/Cellar/mupdf/$(MUPDF_VERSION)/lib \
 	-lmupdf-third -lmupdf
 
-muconvert: muconvert.c
+.PHONY: dylib example
+
+dylib: libmuconvert.dylib
+
+example: muconvert_example
+
+muconvert_example: muconvert.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 libmuconvert.dylib: muconvert.c

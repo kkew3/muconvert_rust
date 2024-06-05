@@ -1,5 +1,5 @@
 # The target.
-muconvert
+muconvert_example
 
 *.o
 *.dylib
