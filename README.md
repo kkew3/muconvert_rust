@@ -27,12 +27,18 @@ Not a perfect procedure, but basically:
 3. Run `make dylib`. This should produce `libmuconvert.dylib` on macOS.
 4. Run `cargo build`.
 
+## C usage
+
+See `muconvert-cli.c` as an example.
+
 ## Rust usage
 
 ```rust
 let filename = "hello.pdf";
 // Assign a large enough buffer for the pdf (NOTE below),
 // and you'll be fine.
+// A possible heuristic for the buffer size is the file
+// size in bytes.
 let buf: Vec<u8> = vec![0; 103977368];
 let text = muconvert_rust::pdftotext(filename, false, true, buf)?;
 ```
