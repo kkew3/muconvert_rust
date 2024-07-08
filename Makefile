@@ -9,10 +9,10 @@ CFLAGS = -Wall -O3 \
 
 dylib: libmuconvert.dylib
 
-example: cbin/muconvert_example
+example: cbin/muconvert-cli
 
-cbin/muconvert_example: muconvert.c
-	$(CC) $(CFLAGS) -o $@ $<
+cbin/muconvert-cli: muconvert-cli.c muconvert.c
+	$(CC) $(CFLAGS) -o $@ $^
 
 libmuconvert.dylib: muconvert.c
 	$(CC) $(CFLAGS) -dynamiclib -o $@ $<

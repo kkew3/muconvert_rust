@@ -136,13 +136,3 @@ int pdftotext(const char *filename, int dehyphenate, unsigned char *data, size_t
 	fz_drop_context(param.ctx);
     return retval;
 }
-
-/* An example usage of `pdftotext`. */
-int main(int argc, char **argv)
-{
-	unsigned char data[2097152] = {0};
-	size_t len = 40000;
-	int retval = pdftotext(argv[1], 1, data, &len);
-	printf("%s", data);
-	return retval;
-}
