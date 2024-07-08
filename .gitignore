@@ -1,5 +1,5 @@
-# The target.
-muconvert_example
+# The C target directory.
+cbin/
 
 *.o
 *.dylib
